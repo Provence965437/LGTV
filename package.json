@@ -1,0 +1,13 @@
+{
+  "name": "lgtv",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "黄果剧场 · 前端 + 认证/收藏后端",
+  "scripts": {
+    "start": "node auth_server.mjs"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.6"
+  }
+}
