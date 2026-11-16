@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>播放 · 黄果剧场</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="brand" href="index.html"><span class="mark">黄</span><span class="name">黄果剧场</span></a>
+      <nav class="nav-links">
+        <a href="index.html">首页</a>
+        <a href="index.html?cat=经典魔改">经典魔改</a>
+        <a href="index.html?cat=AI魔改">AI魔改</a>
+        <a href="index.html?cat=AI换脸">AI换脸</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="nav-search" placeholder="搜索剧名 / 标签" />
+        </div>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="root" class="play-layout"></div>
+
+    <section class="related" id="related" style="display:none">
+      <div class="sec-head">
+        <h2 class="sec-title">相关推荐</h2>
+      </div>
+      <div class="h-row" id="related-row"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap inner">
+      <div>
+        <a class="brand" href="index.html"><span class="mark">黄</span><span class="name">黄果剧场</span></a>
+        <p style="margin-top:10px;font-size:12.5px;color:var(--text-faint)">高清短剧 · 沉浸观影 · 前端原型演示</p>
+      </div>
+      <div class="links"><a href="#">关于我们</a><a href="#">服务条款</a><a href="#">隐私政策</a><a href="#">内容合作</a></div>
+      <div style="font-size:12.5px">© 2026 黄果剧场 · 仅作界面原型</div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      App.initHeader();
+      const id = App.qs("id");
+      const root = document.getElementById("root");
+
+      function mmss(sec) {
+        sec = Math.max(0, Math.floor(sec));
+        return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
+      }
+
+      function buildPlayer(d, ep) {
+        const dur = 15 * 60 + ((d.id * 53) % 420); // 15~22 分钟假时长
+        let playing = false, elapsed = 0, timer = null;
+
+        const p = document.createElement("div");
+        p.className = "player paused";
+        p.innerHTML = `
+          <div class="frame">
+            <img src="${App.esc(d.poster)}" alt="${App.esc(d.t)}" onerror="window.__posterFallback(this)" />
+            <div class="tint"></div>
+          </div>
+          <div class="topbar">
+            <span class="tt">${App.esc(d.t)} · 第${ep}集</span>
+            <span style="font-size:12px;color:var(--accent);font-weight:600">高清 1080P</span>
+          </div>
+          <div class="center-play"><button class="big-play" title="播放"></button></div>
+          <div class="controls">
+            <div class="progress"><div class="bar"></div></div>
+            <div class="ctrl-row">
+              <button class="icon-btn" data-act="play" title="播放/暂停">
+                <svg data-play viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg data-pause viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+              </button>
+              <button class="icon-btn" data-act="mute" title="静音">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="2" fill="none"/></button>
+              </button>
+              <span class="time">00:00 / ${mmss(dur)}</span>
+              <span class="spacer"></span>
+              <button class="icon-btn" data-act="fs" title="全屏">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              </button>
+            </div>
+          </div>`;
+
+        const bar = p.querySelector(".bar");
+        const time = p.querySelector(".time");
+        const progress = p.querySelector(".progress");
+        const playIcon = p.querySelector("[data-play]");
+        const pauseIcon = p.querySelector("[data-pause]");
+
+        function render() {
+          bar.style.width = (elapsed / dur * 100) + "%";
+          time.textContent = mmss(elapsed) + " / " + mmss(dur);
+        }
+        function setPlaying(v) {
+          playing = v;
+          p.classList.toggle("playing", v);
+          p.classList.toggle("paused", !v);
+          playIcon.style.display = v ? "none" : "block";
+          pauseIcon.style.display = v ? "block" : "none";
+          if (v) { timer = setInterval(() => { elapsed++; if (elapsed >= dur) setPlaying(false); render(); }, 1000); }
+          else { clearInterval(timer); }
+        }
+        p.querySelector(".big-play").addEventListener("click", () => setPlaying(true));
+        p.querySelector("[data-act=play]").addEventListener("click", () => setPlaying(!playing));
+        p.querySelector("[data-act=mute]").addEventListener("click", (e) => { App.toast("原型演示：静音切换"); });
+        p.querySelector("[data-act=fs]").addEventListener("click", () => {
+          const el = p;
+          if (document.fullscreenElement) document.exitFullscreen();
+          else if (el.requestFullscreen) el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        });
+        progress.addEventListener("click", (e) => {
+          const r = progress.getBoundingClientRect();
+          elapsed = Math.round((e.clientX - r.left) / r.width * dur);
+          render();
+        });
+        render();
+        return p;
+      }
+
+      function renderDrama(d) {
+        const ep = parseInt(App.qs("ep") || "1", 10);
+        const player = buildPlayer(d, ep);
+
+        const tags = (d.tags || "").split(/[,，]/).map((s) => s.trim()).filter(Boolean).slice(0, 12);
+        const fav = App.isFav(d.id);
+
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <div class="play-info">
+            <h1 class="title">${App.esc(d.t)}</h1>
+            <div class="meta">
+              <span class="badge badge-accent">★ ${App.score(d)}</span>
+              <span class="badge">${App.esc(d.cat || "精选")}</span>
+              ${d.y ? `<span class="badge">${d.y}</span>` : ""}
+              <span class="badge">全 ${d.ep} 集</span>
+              <span class="badge">${App.heat(d.heat)} 热度</span>
+              <span class="badge badge-18">18+</span>
+            </div>
+            <p class="desc">${App.esc(d.d || "暂无简介")}</p>
+            ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${App.esc(t)}</span>`).join("")}</div>` : ""}
+            <div class="info-actions">
+              <button class="btn btn-primary" id="act-fav">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="${fav ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                <span>${fav ? "已加入片单" : "加入片单"}</span>
+              </button>
+              <button class="btn btn-ghost" id="act-share">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                分享
+              </button>
+              <button class="btn btn-ghost" id="act-dl">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+                下载
+              </button>
+            </div>
+          </div>`;
+
+        const side = document.createElement("aside");
+        side.className = "side";
+        side.innerHTML = `
+          <div class="side-card">
+            <div class="side-head"><span class="t">选集</span><span class="n">共 ${d.ep} 集</span></div>
+            <div class="ep-list">
+              ${Array.from({ length: d.ep }, (_, i) => {
+                const n = i + 1;
+                return `<button class="ep-btn ${n === ep ? "active" : ""}" data-ep="${n}">第 ${n} 集<span class="sm">${n === ep ? "播放中" : "全集"}</span></button>`;
+              }).join("")}
+            </div>
+          </div>`;
+
+        // 交互
+        info.querySelector("#act-fav").addEventListener("click", function () {
+          const now = App.toggleFav(d.id);
+          this.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="${now ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            <span>${now ? "已加入片单" : "加入片单"}</span>`;
+        });
+        info.querySelector("#act-share").addEventListener("click", () => App.toast("链接已复制（原型演示）"));
+        info.querySelector("#act-dl").addEventListener("click", () => App.toast("下载为原型演示功能"));
+
+        side.querySelectorAll(".ep-btn").forEach((b) => {
+          b.addEventListener("click", () => {
+            const n = b.dataset.ep;
+            App.toast("切换到第 " + n + " 集");
+            history.replaceState(null, "", "play.html?id=" + d.id + "&ep=" + n);
+            renderDrama(d);
+          });
+        });
+
+        const left = document.createElement("div");
+        left.appendChild(player);
+        left.appendChild(info);
+
+        root.innerHTML = "";
+        root.appendChild(left);
+        root.appendChild(side);
+
+        // 相关推荐
+        const rel = App.dramas.filter((x) => x.cat === d.cat && String(x.id) !== String(d.id));
+        const fill = rel.concat(App.dramas.filter((x) => String(x.id) !== String(d.id) && x.cat !== d.cat));
+        const relList = [...new Map(fill.map((x) => [x.id, x])).values()].slice(0, 16);
+        document.getElementById("related").style.display = "block";
+        App.renderCards(document.getElementById("related-row"), relList);
+
+        document.title = d.t + " · 黄果剧场";
+        window.scrollTo({ top: 0 });
+      }
+
+      App.boot().then(() => {
+        const d = App.byId(id);
+        if (!d) {
+          root.innerHTML = `<div class="empty"><div class="big">🎬</div><p>未找到该剧集（ID: ${App.esc(id || "")}）</p>
+            <a class="btn btn-primary" style="margin-top:18px" href="index.html">返回剧库</a></div>`;
+          return;
+        }
+        renderDrama(d);
+      });
+    })();
+  </script>
+</body>
+</html>

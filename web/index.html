@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>黄果剧场 · 高清短剧</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== 顶部导航 ===== -->
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="brand" href="index.html">
+        <span class="mark">黄</span>
+        <span class="name">黄果剧场</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html">首页</a>
+        <a href="index.html?cat=经典魔改">经典魔改</a>
+        <a href="index.html?cat=AI魔改">AI魔改</a>
+        <a href="index.html?cat=AI换脸">AI换脸</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="nav-search" placeholder="搜索剧名 / 标签" />
+        </div>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 滚动推荐封面（轮播） ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-bg" id="hero-bg"></div>
+    <div class="veil"></div>
+    <div class="wrap hero-inner">
+      <div class="hero-content" id="hero-content">
+        <div class="hero-eyebrow"><span class="dot"></span><span id="hero-eyebrow">黄果精选 · 滚动推荐</span></div>
+        <h1 class="hero-title" id="hero-title">加载中…</h1>
+        <div class="hero-meta" id="hero-meta"></div>
+        <p class="hero-desc" id="hero-desc"></p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" id="hero-play" href="#">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            立即观看
+          </a>
+          <button class="btn btn-ghost" id="hero-fav">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            <span id="hero-fav-txt">加入片单</span>
+          </button>
+        </div>
+        <div class="hero-dots" id="hero-dots"></div>
+      </div>
+      <div class="hero-arrows">
+        <button class="hero-arrow" id="hero-prev" aria-label="上一部">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="hero-arrow" id="hero-next" aria-label="下一部">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 列表 ===== -->
+  <main class="wrap">
+    <div class="list-head">
+      <h1 class="page-title" id="page-title">全部剧集</h1>
+      <p class="page-sub" id="page-sub">发现精彩短剧</p>
+
+      <div class="filters" id="filters"></div>
+
+      <div class="toolbar">
+        <span class="count" id="count"></span>
+        <select id="sort">
+          <option value="heat">按热度排序</option>
+          <option value="ep">按集数排序</option>
+          <option value="year">按年份排序</option>
+          <option value="title">按名称排序</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">
+      <div class="big">🗂</div>
+      <p>没有找到匹配的剧集</p>
+    </div>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="site-footer">
+    <div class="wrap inner">
+      <div>
+        <a class="brand" href="index.html"><span class="mark">黄</span><span class="name">黄果剧场</span></a>
+        <p style="margin-top:10px;font-size:12.5px;color:var(--text-faint)">高清短剧 · 沉浸观影 · 前端原型演示</p>
+      </div>
+      <div class="links">
+        <a href="#">关于我们</a>
+        <a href="#">服务条款</a>
+        <a href="#">隐私政策</a>
+        <a href="#">内容合作</a>
+      </div>
+      <div style="font-size:12.5px">© 2026 黄果剧场 · 仅作界面原型</div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      App.initHeader();
+
+      const params = new URLSearchParams(location.search);
+      let cat = params.get("cat") || "";
+      let q = (params.get("q") || "").trim();
+      let sort = params.get("sort") || "heat";
+      let fav = params.get("fav") === "1";
+
+      const grid = document.getElementById("grid");
+      const empty = document.getElementById("empty");
+      const countEl = document.getElementById("count");
+      const filters = document.getElementById("filters");
+      const titleEl = document.getElementById("page-title");
+      const subEl = document.getElementById("page-sub");
+
+      /* ---------- 列表：筛选 / 排序 / 渲染 ---------- */
+      function applyURL() {
+        const p = new URLSearchParams();
+        if (cat) p.set("cat", cat);
+        if (q) p.set("q", q);
+        if (fav) p.set("fav", "1");
+        if (sort !== "heat") p.set("sort", sort);
+        const s = p.toString();
+        history.replaceState(null, "", "index.html" + (s ? "?" + s : ""));
+      }
+
+      function renderList() {
+        let list = [...App.dramas];
+        if (cat) list = list.filter((d) => d.cat === cat);
+        if (q) {
+          const kw = q.toLowerCase();
+          list = list.filter((d) =>
+            (d.t || "").toLowerCase().includes(kw) ||
+            (d.d || "").toLowerCase().includes(kw) ||
+            (d.tags || "").toLowerCase().includes(kw)
+          );
+        }
+        if (fav) list = list.filter((d) => App.isFav(d.id));
+        list.sort((a, b) => {
+          if (sort === "ep") return (b.ep || 0) - (a.ep || 0);
+          if (sort === "year") return (b.y || 0) - (a.y || 0);
+          if (sort === "title") return (a.t || "").localeCompare(b.t || "", "zh");
+          return (b.heat || 0) - (a.heat || 0);
+        });
+
+        App.renderCards(grid, list);
+        empty.style.display = list.length ? "none" : "block";
+        countEl.textContent = `共 ${list.length} 部`;
+
+        if (fav) { titleEl.textContent = "我的片单"; subEl.textContent = "已收藏的剧集 · 共 " + list.length + " 部"; }
+        else if (q) { titleEl.textContent = `“${q}” 的搜索结果`; subEl.textContent = "按关键词匹配剧名、简介与标签"; }
+        else if (cat) { titleEl.textContent = cat; subEl.textContent = "分类浏览 · 黄果剧场"; }
+        else { titleEl.textContent = "全部剧集"; subEl.textContent = "发现精彩短剧 · 共 " + App.dramas.length + " 部"; }
+
+        Array.from(filters.children).forEach((c) => {
+          c.classList.toggle("active", (c.dataset.cat || "") === cat);
+        });
+      }
+
+      function buildChips() {
+        const counts = {};
+        App.dramas.forEach((d) => { counts[d.cat] = (counts[d.cat] || 0) + 1; });
+        const chips = [{ name: "全部", key: "" }]
+          .concat(App.CATS.map((c) => ({ name: c, key: c })));
+        filters.innerHTML = chips.map((c) =>
+          `<button class="chip ${(c.key === cat ? "active" : "")}" data-cat="${App.esc(c.key)}">
+             ${App.esc(c.name)}${c.key ? `<span style="opacity:.55;font-size:11px"> ${counts[c.key] || 0}</span>` : ""}
+           </button>`
+        ).join("");
+        filters.addEventListener("click", (e) => {
+          const btn = e.target.closest(".chip");
+          if (!btn) return;
+          cat = btn.dataset.cat || "";
+          q = "";
+          fav = false;
+          renderList(); applyURL();
+        });
+      }
+
+      document.getElementById("sort").value = sort;
+      document.getElementById("sort").addEventListener("change", (e) => {
+        sort = e.target.value;
+        renderList(); applyURL();
+      });
+
+      /* ---------- 滚动推荐封面轮播 ---------- */
+      const hero = document.getElementById("hero");
+      const bg = document.getElementById("hero-bg");
+      const content = document.getElementById("hero-content");
+      const eyebrow = document.getElementById("hero-eyebrow");
+      const title = document.getElementById("hero-title");
+      const desc = document.getElementById("hero-desc");
+      const meta = document.getElementById("hero-meta");
+      const playBtn = document.getElementById("hero-play");
+      const favBtn = document.getElementById("hero-fav");
+      const favTxt = document.getElementById("hero-fav-txt");
+      const dots = document.getElementById("hero-dots");
+
+      let featured = [];
+      let idx = 0;
+      let timer = null;
+
+      function setContent(f, animate) {
+        if (animate) {
+          content.classList.add("swap");
+        }
+        const done = () => {
+          eyebrow.textContent = `黄果精选 · 滚动推荐 ${String(idx + 1).padStart(2, "0")} / ${String(featured.length).padStart(2, "0")}`;
+          title.textContent = f.t;
+          desc.textContent = f.d || "暂无简介";
+          meta.innerHTML =
+            `<span class="badge badge-accent">★ ${App.score(f)}</span>` +
+            `<span class="badge">${App.esc(f.cat)}</span>` +
+            `<span class="badge">${f.ep} 集</span>` +
+            `<span class="badge">${App.heat(f.heat)} 热度</span>` +
+            (f.y ? `<span class="badge">${f.y}</span>` : "") +
+            `<span class="badge badge-18">18+</span>`;
+          playBtn.href = "play.html?id=" + f.id;
+          favTxt.textContent = App.isFav(f.id) ? "已加入片单" : "加入片单";
+          if (animate) {
+            void content.offsetWidth;
+            content.classList.remove("swap");
+          }
+        };
+        if (animate) setTimeout(done, 240);
+        else done();
+      }
+
+      function renderSlide(i) {
+        idx = (i + featured.length) % featured.length;
+        const f = featured[idx];
+        Array.from(bg.children).forEach((s, k) => s.classList.toggle("active", k === idx));
+        Array.from(dots.children).forEach((d, k) => d.classList.toggle("active", k === idx));
+        setContent(f, true);
+      }
+
+      function start() {
+        stop();
+        timer = setInterval(() => renderSlide(idx + 1), 5000);
+      }
+      function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+      function buildCarousel(list) {
+        featured = list.slice(0, 6);
+        bg.innerHTML = featured.map((f) =>
+          `<div class="hero-bg-slide"><img src="${App.esc(f.poster)}" alt="${App.esc(f.t)}" onerror="window.__posterFallback && window.__posterFallback(this)"></div>`
+        ).join("");
+        dots.innerHTML = featured.map((_, k) =>
+          `<button class="hero-dot ${k === 0 ? "active" : ""}" data-i="${k}"></button>`
+        ).join("");
+
+        renderSlide(0);
+        start();
+
+        document.getElementById("hero-prev").onclick = () => { renderSlide(idx - 1); start(); };
+        document.getElementById("hero-next").onclick = () => { renderSlide(idx + 1); start(); };
+        dots.addEventListener("click", (e) => {
+          const d = e.target.closest(".hero-dot");
+          if (!d) return;
+          renderSlide(Number(d.dataset.i)); start();
+        });
+        hero.addEventListener("mouseenter", stop);
+        hero.addEventListener("mouseleave", start);
+        favBtn.onclick = () => { App.toggleFav(featured[idx].id); favTxt.textContent = App.isFav(featured[idx].id) ? "已加入片单" : "加入片单"; };
+      }
+
+      /* ---------- 启动 ---------- */
+      App.boot().then((dramas) => {
+        if (!dramas.length) return;
+        const byHeat = [...dramas].sort((a, b) => (b.heat || 0) - (a.heat || 0));
+        buildCarousel(byHeat);
+        buildChips();
+        renderList();
+      });
+    })();
+  </script>
+</body>
+</html>

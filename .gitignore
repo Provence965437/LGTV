@@ -1,0 +1,12 @@
+# 凭据（真实值仅留在服务器/本地，不进入版本库）
+.env
+
+# 运行产物
+*.log
+*.pid
+node_modules/
+__pycache__/
+*.pyc
+
+# 系统
+.DS_Store
