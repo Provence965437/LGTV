@@ -142,7 +142,10 @@
           if (status === 200 && data && data.ok) {
             App.setSession(data.token, data.user);
             App.toast(path.includes("register") ? "注册成功，已自动登录" : "登录成功");
-            setTimeout(() => (location.href = "index.html"), 800);
+            setTimeout(() => {
+              const next = App.qs("next") || "";
+              location.href = (!next || /^(https?:)?\/\//i.test(next)) ? "index.html" : next;
+            }, 800);
           } else {
             App.toast((data && data.error) || "操作失败，请重试");
           }

@@ -11,11 +11,14 @@ import { createPool } from "mysql2/promise";
 import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 const PORT = Number(process.env.AUTH_PORT || 8787);
 const HOST = "0.0.0.0";
 const WEB_ROOT = process.env.WEB_ROOT || "/root/LGTV/web";
 const DB_NAME = process.env.MYSQL_DATABASE || "hgtv_metadata";
+const R2_ENDPOINT = process.env.R2_ENDPOINT || "https://56f0aa90cad203586e82810a1536c9b6.r2.cloudflarestorage.com";
+const R2_BUCKET = process.env.R2_BUCKET || "hgclone";
 
 const db = createPool({
   host: process.env.MYSQL_HOST || "127.0.0.1",
@@ -131,6 +134,9 @@ function authToken(req) {
   const h = req.headers.authorization || "";
   return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
 }
+function queryToken(req) {
+  try { return new URL(req.url, "http://x").searchParams.get("token") || ""; } catch { return ""; }
+}
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -195,6 +201,93 @@ async function handleLogin(body) {
   return [200, { ok: true, token, user: { id: u.id, account: u.account, nickname: u.nickname } }];
 }
 
+/* ---------- R2 视频流 ---------- */
+let _s3 = null;
+function getS3() {
+  if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) return null;
+  if (!_s3) {
+    _s3 = new S3Client({
+      region: "auto",
+      endpoint: R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    });
+  }
+  return _s3;
+}
+
+async function streamVideo(req, res, episodeId) {
+  const s3 = getS3();
+  if (!s3) return json(res, 503, { ok: false, error: "视频服务未配置" });
+
+  const [rows] = await db.query(
+    `SELECT a.object_key, a.mime_type
+       FROM media_assets a
+      WHERE a.episode_id = ? AND a.provider = 'cloudflare-r2'
+        AND a.asset_type = 'mp4' AND a.status = 'ready'`,
+    [episodeId]
+  );
+  const asset = rows[0];
+  if (!asset) return json(res, 404, { ok: false, error: "视频不存在或尚未就绪" });
+
+  const range = req.headers.range || "";
+  try {
+    if (req.method === "HEAD") {
+      const head = await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: asset.object_key }));
+      res.writeHead(200, {
+        "Content-Type": asset.mime_type || head.ContentType || "video/mp4",
+        "Content-Length": String(head.ContentLength || 0),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+      });
+      return res.end();
+    }
+
+    const cmd = new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: asset.object_key,
+      ...(range ? { Range: range } : {}),
+    });
+    const obj = await s3.send(cmd);
+    const headers = {
+      "Content-Type": obj.ContentType || asset.mime_type || "video/mp4",
+      "Content-Length": String(obj.ContentLength ?? 0),
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "no-store",
+    };
+    if (range && obj.ContentRange) headers["Content-Range"] = obj.ContentRange;
+    res.writeHead(range ? 206 : 200, headers);
+
+    const body = obj.Body;
+    if (body && typeof body.pipe === "function") {
+      body.on("error", (e) => { console.error("[streamVideo] body error", e); res.destroy(); });
+      body.pipe(res);
+      return;
+    }
+    if (body && typeof body.getReader === "function") {
+      const reader = body.getReader();
+      (async () => {
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+          }
+          res.end();
+        } catch (e) { console.error("[streamVideo] read error", e); res.destroy(); }
+      })();
+      return;
+    }
+    res.end();
+  } catch (e) {
+    console.error("[streamVideo]", e);
+    if (!res.headersSent) return json(res, 502, { ok: false, error: "读取视频失败" });
+    res.destroy();
+  }
+}
+
 /* ---------- 主服务器 ---------- */
 const server = http.createServer(async (req, res) => {
   cors(res);
@@ -249,6 +342,45 @@ const server = http.createServer(async (req, res) => {
       }
       await db.query("DELETE FROM web_favorites WHERE user_id = ? AND drama_id = ?", [u.id, dramaId]);
       return json(res, 200, { ok: true, removed: true });
+    }
+
+    // 剧集列表（需登录）
+    const epMatch = p.match(/^\/api\/drama\/(\d+)\/episodes$/);
+    if (epMatch && method === "GET") {
+      const u = await sessionUser(authToken(req));
+      if (!u) return json(res, 401, { ok: false, error: "请先登录" });
+      const dramaId = Number(epMatch[1]);
+      const [dramas] = await db.query(
+        "SELECT id, title, poster_url, episode_count FROM dramas WHERE id = ?", [dramaId]
+      );
+      if (!dramas[0]) return json(res, 404, { ok: false, error: "剧集不存在" });
+      const [rows] = await db.query(
+        `SELECT e.id, e.episode_number, e.title, e.is_locked, e.trial_seconds,
+                a.object_key, a.status AS asset_status, a.size_bytes
+           FROM episodes e
+           LEFT JOIN media_assets a ON a.episode_id = e.id
+             AND a.provider = 'cloudflare-r2' AND a.asset_type = 'mp4'
+          WHERE e.drama_id = ?
+          ORDER BY e.episode_number`, [dramaId]
+      );
+      const episodes = rows.map((r) => ({
+        id: r.id,
+        episode_number: r.episode_number,
+        title: r.title,
+        is_locked: !!r.is_locked,
+        trial_seconds: r.trial_seconds,
+        ready: r.asset_status === "ready" && !!r.object_key,
+        size_bytes: r.size_bytes,
+      }));
+      return json(res, 200, { ok: true, drama: dramas[0], episodes });
+    }
+
+    // 视频流（需登录；token 走 query，因为 <video> 无法携带 Authorization 头）
+    const vidMatch = p.match(/^\/api\/video\/(\d+)$/);
+    if (vidMatch && (method === "GET" || method === "HEAD")) {
+      const u = await sessionUser(queryToken(req));
+      if (!u) return json(res, 401, { ok: false, error: "请先登录" });
+      return await streamVideo(req, res, Number(vidMatch[1]));
     }
 
     // 静态文件

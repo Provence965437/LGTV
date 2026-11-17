@@ -45,10 +45,10 @@
     <div class="wrap inner">
       <div>
         <a class="brand" href="index.html"><span class="mark">黄</span><span class="name">黄果剧场</span></a>
-        <p style="margin-top:10px;font-size:12.5px;color:var(--text-faint)">高清短剧 · 沉浸观影 · 前端原型演示</p>
+        <p style="margin-top:10px;font-size:12.5px;color:var(--text-faint)">高清短剧 · 沉浸观影</p>
       </div>
       <div class="links"><a href="#">关于我们</a><a href="#">服务条款</a><a href="#">隐私政策</a><a href="#">内容合作</a></div>
-      <div style="font-size:12.5px">© 2026 黄果剧场 · 仅作界面原型</div>
+      <div style="font-size:12.5px">© 2026 黄果剧场</div>
     </div>
   </footer>
 
@@ -64,79 +64,43 @@
         return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
       }
 
-      function buildPlayer(d, ep) {
-        const dur = 15 * 60 + ((d.id * 53) % 420); // 15~22 分钟假时长
-        let playing = false, elapsed = 0, timer = null;
+      function playUrl(episodeId) {
+        return App.apiBase + "/api/video/" + episodeId + "?token=" + encodeURIComponent(App.token());
+      }
 
+      function goLogin() {
+        const back = "play.html?id=" + encodeURIComponent(id) + (App.qs("ep") ? "&ep=" + encodeURIComponent(App.qs("ep")) : "");
+        location.href = "login.html?next=" + encodeURIComponent(back);
+      }
+
+      function buildPlayer(d, ep) {
         const p = document.createElement("div");
-        p.className = "player paused";
+        p.className = "player";
+
+        if (ep && ep.ready) {
+          p.innerHTML = `
+            <video controls playsinline preload="metadata" poster="${App.esc(d.poster)}"></video>
+            <div class="topbar"><span class="tt">${App.esc(d.t)} · 第${ep.episode_number}集</span></div>`;
+          const v = p.querySelector("video");
+          v.src = playUrl(ep.id);
+          return { el: p, video: v };
+        }
+
         p.innerHTML = `
           <div class="frame">
             <img src="${App.esc(d.poster)}" alt="${App.esc(d.t)}" onerror="window.__posterFallback(this)" />
             <div class="tint"></div>
           </div>
-          <div class="topbar">
-            <span class="tt">${App.esc(d.t)} · 第${ep}集</span>
-            <span style="font-size:12px;color:var(--accent);font-weight:600">高清 1080P</span>
-          </div>
-          <div class="center-play"><button class="big-play" title="播放"></button></div>
-          <div class="controls">
-            <div class="progress"><div class="bar"></div></div>
-            <div class="ctrl-row">
-              <button class="icon-btn" data-act="play" title="播放/暂停">
-                <svg data-play viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                <svg data-pause viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
-              </button>
-              <button class="icon-btn" data-act="mute" title="静音">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="2" fill="none"/></button>
-              </button>
-              <span class="time">00:00 / ${mmss(dur)}</span>
-              <span class="spacer"></span>
-              <button class="icon-btn" data-act="fs" title="全屏">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-              </button>
-            </div>
-          </div>`;
-
-        const bar = p.querySelector(".bar");
-        const time = p.querySelector(".time");
-        const progress = p.querySelector(".progress");
-        const playIcon = p.querySelector("[data-play]");
-        const pauseIcon = p.querySelector("[data-pause]");
-
-        function render() {
-          bar.style.width = (elapsed / dur * 100) + "%";
-          time.textContent = mmss(elapsed) + " / " + mmss(dur);
-        }
-        function setPlaying(v) {
-          playing = v;
-          p.classList.toggle("playing", v);
-          p.classList.toggle("paused", !v);
-          playIcon.style.display = v ? "none" : "block";
-          pauseIcon.style.display = v ? "block" : "none";
-          if (v) { timer = setInterval(() => { elapsed++; if (elapsed >= dur) setPlaying(false); render(); }, 1000); }
-          else { clearInterval(timer); }
-        }
-        p.querySelector(".big-play").addEventListener("click", () => setPlaying(true));
-        p.querySelector("[data-act=play]").addEventListener("click", () => setPlaying(!playing));
-        p.querySelector("[data-act=mute]").addEventListener("click", (e) => { App.toast("原型演示：静音切换"); });
-        p.querySelector("[data-act=fs]").addEventListener("click", () => {
-          const el = p;
-          if (document.fullscreenElement) document.exitFullscreen();
-          else if (el.requestFullscreen) el.requestFullscreen();
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-        });
-        progress.addEventListener("click", (e) => {
-          const r = progress.getBoundingClientRect();
-          elapsed = Math.round((e.clientX - r.left) / r.width * dur);
-          render();
-        });
-        render();
-        return p;
+          <div class="topbar"><span class="tt">${App.esc(d.t)} · 第${ep ? ep.episode_number : 1}集</span></div>
+          <div class="center-play"><div class="big-play" style="opacity:.45"></div></div>
+          <div style="position:absolute;left:0;right:0;bottom:16px;text-align:center;color:var(--text-dim);font-size:13px">本集视频处理中，请稍后再来</div>`;
+        return { el: p, video: null };
       }
 
-      function renderDrama(d) {
-        const ep = parseInt(App.qs("ep") || "1", 10);
+      function renderPage(d, episodes, epNumber) {
+        let ep = episodes.find((x) => x.episode_number === epNumber);
+        if (!ep) ep = episodes.find((x) => x.ready) || episodes[0];
+
         const player = buildPlayer(d, ep);
 
         const tags = (d.tags || "").split(/[,，]/).map((s) => s.trim()).filter(Boolean).slice(0, 12);
@@ -150,7 +114,7 @@
               <span class="badge badge-accent">★ ${App.score(d)}</span>
               <span class="badge">${App.esc(d.cat || "精选")}</span>
               ${d.y ? `<span class="badge">${d.y}</span>` : ""}
-              <span class="badge">全 ${d.ep} 集</span>
+              <span class="badge">全 ${episodes.length} 集</span>
               <span class="badge">${App.heat(d.heat)} 热度</span>
               <span class="badge badge-18">18+</span>
             </div>
@@ -176,42 +140,51 @@
         side.className = "side";
         side.innerHTML = `
           <div class="side-card">
-            <div class="side-head"><span class="t">选集</span><span class="n">共 ${d.ep} 集</span></div>
+            <div class="side-head"><span class="t">选集</span><span class="n">共 ${episodes.length} 集</span></div>
             <div class="ep-list">
-              ${Array.from({ length: d.ep }, (_, i) => {
-                const n = i + 1;
-                return `<button class="ep-btn ${n === ep ? "active" : ""}" data-ep="${n}">第 ${n} 集<span class="sm">${n === ep ? "播放中" : "全集"}</span></button>`;
+              ${episodes.map((e) => {
+                const n = e.episode_number;
+                const active = ep && String(e.id) === String(ep.id);
+                const label = e.ready ? (active ? "播放中" : "可播放") : "处理中";
+                return `<button class="ep-btn ${active ? "active" : ""}" data-ep-n="${n}">第 ${n} 集<span class="sm">${label}</span></button>`;
               }).join("")}
             </div>
           </div>`;
 
-        // 交互
         info.querySelector("#act-fav").addEventListener("click", function () {
           const now = App.toggleFav(d.id);
           this.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="${now ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
             <span>${now ? "已加入片单" : "加入片单"}</span>`;
         });
-        info.querySelector("#act-share").addEventListener("click", () => App.toast("链接已复制（原型演示）"));
-        info.querySelector("#act-dl").addEventListener("click", () => App.toast("下载为原型演示功能"));
+        info.querySelector("#act-share").addEventListener("click", () => {
+          const url = location.origin + location.pathname + "?id=" + d.id;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => App.toast("链接已复制"), () => App.toast("复制失败"));
+          } else {
+            App.toast("链接：" + url);
+          }
+        });
+        info.querySelector("#act-dl").addEventListener("click", () => App.toast("下载功能开发中"));
 
         side.querySelectorAll(".ep-btn").forEach((b) => {
           b.addEventListener("click", () => {
-            const n = b.dataset.ep;
-            App.toast("切换到第 " + n + " 集");
+            const n = parseInt(b.dataset.epN, 10);
+            const target = episodes.find((x) => x.episode_number === n);
+            if (!target) return;
+            if (!target.ready) { App.toast("本集视频处理中，请稍后再来"); return; }
             history.replaceState(null, "", "play.html?id=" + d.id + "&ep=" + n);
-            renderDrama(d);
+            renderPage(d, episodes, n);
           });
         });
 
         const left = document.createElement("div");
-        left.appendChild(player);
+        left.appendChild(player.el);
         left.appendChild(info);
 
         root.innerHTML = "";
         root.appendChild(left);
         root.appendChild(side);
 
-        // 相关推荐
         const rel = App.dramas.filter((x) => x.cat === d.cat && String(x.id) !== String(d.id));
         const fill = rel.concat(App.dramas.filter((x) => String(x.id) !== String(d.id) && x.cat !== d.cat));
         const relList = [...new Map(fill.map((x) => [x.id, x])).values()].slice(0, 16);
@@ -222,14 +195,40 @@
         window.scrollTo({ top: 0 });
       }
 
-      App.boot().then(() => {
+      App.boot().then(async () => {
         const d = App.byId(id);
         if (!d) {
           root.innerHTML = `<div class="empty"><div class="big">🎬</div><p>未找到该剧集（ID: ${App.esc(id || "")}）</p>
             <a class="btn btn-primary" style="margin-top:18px" href="index.html">返回剧库</a></div>`;
           return;
         }
-        renderDrama(d);
+
+        // 登录鉴权
+        if (!App.user) { goLogin(); return; }
+
+        // 拉取真实剧集列表（含 R2 就绪状态）
+        let res;
+        try {
+          res = await App.api("/api/drama/" + id + "/episodes");
+        } catch (e) {
+          root.innerHTML = `<div class="empty"><div class="big">⚠️</div><p>网络错误，请稍后重试</p>
+            <a class="btn btn-primary" style="margin-top:18px" href="index.html">返回剧库</a></div>`;
+          return;
+        }
+        if (res.status === 401) { App.clearSession(); goLogin(); return; }
+        if (res.status !== 200 || !res.data || !res.data.ok || !Array.isArray(res.data.episodes)) {
+          root.innerHTML = `<div class="empty"><div class="big">⚠️</div><p>加载失败：${App.esc((res.data && res.data.error) || "请稍后重试")}</p>
+            <a class="btn btn-primary" style="margin-top:18px" href="index.html">返回剧库</a></div>`;
+          return;
+        }
+        if (!res.data.episodes.length) {
+          root.innerHTML = `<div class="empty"><div class="big">🎬</div><p>本剧集视频尚未上线</p>
+            <a class="btn btn-primary" style="margin-top:18px" href="index.html">返回剧库</a></div>`;
+          return;
+        }
+
+        const epNumber = parseInt(App.qs("ep") || "1", 10);
+        renderPage(d, res.data.episodes, epNumber);
       });
     })();
   </script>

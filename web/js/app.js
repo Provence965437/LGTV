@@ -310,5 +310,7 @@
     api, token, getUser, setSession, clearSession, isLoggedIn, logout, refreshAuth,
     get dramas() { return state.dramas; },
     get favs() { return [...state.favs]; },
+    get user() { return state.user; },
+    get apiBase() { return API; },
   };
 })(window);
