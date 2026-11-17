@@ -291,6 +291,21 @@
       if (btn) btn.addEventListener("click", go);
     }
 
+    // 移动端汉堡菜单
+    const navToggle = $("#nav-toggle");
+    if (navToggle) {
+      navToggle.addEventListener("click", () => {
+        const open = document.body.classList.toggle("nav-open");
+        navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      $$(".nav-links a").forEach((a) => {
+        a.addEventListener("click", () => {
+          document.body.classList.remove("nav-open");
+          navToggle.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+
     // 登录态（本地会话即时渲染；token 校验由 boot() 异步完成）
     renderLoginState();
   }

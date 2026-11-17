@@ -130,6 +130,18 @@ input, select { font-family: inherit; }
 }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 
+/* 移动端汉堡菜单按钮（桌面隐藏） */
+.hamburger {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--line);
+  padding: 0 11px; cursor: pointer;
+}
+.hamburger span { display: block; height: 2px; width: 100%; border-radius: 2px; background: var(--text); transition: all var(--t) var(--ease); }
+body.nav-open .hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+body.nav-open .hamburger span:nth-child(2) { opacity: 0; }
+body.nav-open .hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
 /* 登录后的用户区 */
 .userbox { display: flex; align-items: center; gap: 8px; }
 .userbox a.btn { text-decoration: none; }
@@ -316,6 +328,10 @@ input, select { font-family: inherit; }
 .list-head .page-title { font-size: clamp(26px, 3.6vw, 38px); }
 .page-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 4.5vw, 48px); letter-spacing: 0.01em; margin-bottom: 6px; }
 .page-sub { color: var(--text-dim); }
+
+/* 无 Hero 的独立页（收藏页等）：顶部让出固定导航 */
+.page-top { padding-top: calc(var(--nav-h) + 24px); }
+.page-top .list-head { padding-top: 0; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 9px; margin: 22px 0 8px; }
 .chip {
@@ -513,14 +529,44 @@ input, select { font-family: inherit; }
   .side { position: static; }
 }
 @media (max-width: 860px) {
-  .nav-links { display: none; }
+  .nav-inner { gap: 14px; }
+  .hamburger { display: flex; }
+  .nav-links {
+    display: none;
+    position: absolute; top: var(--nav-h); left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 2px; margin-left: 0;
+    background: rgba(13,13,20,0.98);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    padding: 10px 18px 18px;
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 24px 48px -24px rgba(0,0,0,0.85);
+  }
+  body.nav-open .nav-links { display: flex; }
+  .nav-links a { padding: 13px 14px; font-size: 15px; border-radius: 11px; }
+  .nav-links a.active::after { display: none; }
   .search { width: 180px; }
   .auth { grid-template-columns: 1fr; }
   .auth-visual { display: none; }
-  .hero { min-height: 72vh; }
+  .hero { min-height: 66vh; }
 }
 @media (max-width: 560px) {
   .search { display: none; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 16px 12px; }
+  .hero { min-height: 0; padding: calc(var(--nav-h) + 20px) 0 42px; }
+  .hero-title { font-size: 30px; margin-bottom: 12px; }
+  .hero-desc { font-size: 14px; -webkit-line-clamp: 2; margin-bottom: 20px; }
+  .hero-arrows { display: none; }
+  .hero-dots { margin-top: 18px; }
   .hero-actions .btn { flex: 1; }
+  .play-layout { padding: calc(var(--nav-h) + 14px) 0 46px; gap: 20px; }
+  .player { border-radius: var(--radius); }
+  .play-info { padding-top: 18px; }
+  .play-info .title { font-size: 24px; }
+  .info-actions .btn { flex: 1; }
+  .ep-list { max-height: none; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+  .ep-btn { padding: 12px 4px; }
+  .related { margin-top: 36px; }
+  .list-head { padding-top: 20px; }
+  .filters { gap: 8px; margin-top: 16px; }
+  .chip { padding: 8px 14px; font-size: 12.5px; }
 }
