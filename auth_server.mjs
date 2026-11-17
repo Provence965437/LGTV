@@ -19,6 +19,7 @@ const WEB_ROOT = process.env.WEB_ROOT || "/root/LGTV/web";
 const DB_NAME = process.env.MYSQL_DATABASE || "hgtv_metadata";
 const R2_ENDPOINT = process.env.R2_ENDPOINT || "https://56f0aa90cad203586e82810a1536c9b6.r2.cloudflarestorage.com";
 const R2_BUCKET = process.env.R2_BUCKET || "hgclone";
+const R2_PUBLIC_BASE = process.env.R2_PUBLIC_BASE_URL || "https://pub-5ece6bc3f8e74d6b8b004889e0f5b5ee.r2.dev";
 
 const db = createPool({
   host: process.env.MYSQL_HOST || "127.0.0.1",
@@ -356,22 +357,29 @@ const server = http.createServer(async (req, res) => {
       if (!dramas[0]) return json(res, 404, { ok: false, error: "剧集不存在" });
       const [rows] = await db.query(
         `SELECT e.id, e.episode_number, e.title, e.is_locked, e.trial_seconds,
-                a.object_key, a.status AS asset_status, a.size_bytes
+                a.object_key, a.public_url, a.status AS asset_status, a.size_bytes
            FROM episodes e
            LEFT JOIN media_assets a ON a.episode_id = e.id
              AND a.provider = 'cloudflare-r2' AND a.asset_type = 'mp4'
           WHERE e.drama_id = ?
           ORDER BY e.episode_number`, [dramaId]
       );
-      const episodes = rows.map((r) => ({
-        id: r.id,
-        episode_number: r.episode_number,
-        title: r.title,
-        is_locked: !!r.is_locked,
-        trial_seconds: r.trial_seconds,
-        ready: r.asset_status === "ready" && !!r.object_key,
-        size_bytes: r.size_bytes,
-      }));
+      const episodes = rows.map((r) => {
+        const ready = r.asset_status === "ready" && !!r.object_key;
+        const public_url = r.public_url || (ready && r.object_key
+          ? `${R2_PUBLIC_BASE}/${r.object_key.split("/").map(encodeURIComponent).join("/")}`
+          : null);
+        return {
+          id: r.id,
+          episode_number: r.episode_number,
+          title: r.title,
+          is_locked: !!r.is_locked,
+          trial_seconds: r.trial_seconds,
+          ready,
+          public_url,
+          size_bytes: r.size_bytes,
+        };
+      });
       return json(res, 200, { ok: true, drama: dramas[0], episodes });
     }
 

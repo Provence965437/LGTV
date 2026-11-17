@@ -64,10 +64,6 @@
         return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
       }
 
-      function playUrl(episodeId) {
-        return App.apiBase + "/api/video/" + episodeId + "?token=" + encodeURIComponent(App.token());
-      }
-
       function goLogin() {
         const back = "play.html?id=" + encodeURIComponent(id) + (App.qs("ep") ? "&ep=" + encodeURIComponent(App.qs("ep")) : "");
         location.href = "login.html?next=" + encodeURIComponent(back);
@@ -77,12 +73,12 @@
         const p = document.createElement("div");
         p.className = "player";
 
-        if (ep && ep.ready) {
+        if (ep && ep.ready && ep.public_url) {
           p.innerHTML = `
             <video controls playsinline preload="metadata" poster="${App.esc(d.poster)}"></video>
             <div class="topbar"><span class="tt">${App.esc(d.t)} · 第${ep.episode_number}集</span></div>`;
           const v = p.querySelector("video");
-          v.src = playUrl(ep.id);
+          v.src = ep.public_url;
           return { el: p, video: v };
         }
 
