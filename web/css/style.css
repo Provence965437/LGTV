@@ -245,6 +245,19 @@ input, select { font-family: inherit; }
   color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.03em;
 }
 
+.poster-card .p-fav {
+  position: absolute; top: 10px; right: 10px;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  color: #fff; border: none; cursor: pointer; z-index: 3;
+  transition: transform var(--t), color var(--t), background var(--t);
+}
+.poster-card .p-fav svg { width: 16px; height: 16px; fill: none; transition: fill var(--t); }
+.poster-card .p-fav:hover { transform: scale(1.14); color: var(--accent); }
+.poster-card .p-fav.on { color: var(--danger); background: rgba(0,0,0,0.6); }
+.poster-card .p-fav.on svg { fill: currentColor; }
+
 /* ============================================================
    主页 Hero
    ============================================================ */

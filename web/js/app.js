@@ -127,38 +127,38 @@
 
   /* ---------- 收藏 ---------- */
   async function loadFavs() {
-    if (isLoggedIn()) {
-      try {
-        const { status, data } = await api("/api/favs");
-        if (status === 200 && data && Array.isArray(data.favs)) {
-          state.favs = new Set(data.favs.map(String));
-          return;
-        }
-        if (status === 401) { clearSession(); state.user = null; renderLoginState(); }
-      } catch {}
-      state.favs = new Set();
-    } else {
-      try {
-        state.favs = new Set((JSON.parse(localStorage.getItem("huangju_favs") || "[]")).map(String));
-      } catch { state.favs = new Set(); }
-    }
+    if (!isLoggedIn()) { state.favs = new Set(); return; }
+    try {
+      const { status, data } = await api("/api/favs");
+      if (status === 200 && data && Array.isArray(data.favs)) {
+        state.favs = new Set(data.favs.map(String));
+        return;
+      }
+      if (status === 401) { clearSession(); state.user = null; renderLoginState(); }
+    } catch {}
+    state.favs = new Set();
   }
 
-  /* 同步返回新状态；异步持久化（登录走后端，否则走本地） */
+  /* 收藏需登录；同步返回新状态，异步持久化到后端 */
   function toggleFav(id) {
     const k = String(id);
+    if (!isLoggedIn()) {
+      toast("请先登录后再收藏");
+      const here = location.pathname.split("/").pop() || "index.html";
+      setTimeout(() => {
+        location.href = "login.html?next=" + encodeURIComponent(here + location.search);
+      }, 700);
+      return null;
+    }
     const now = !state.favs.has(k);
     if (now) state.favs.add(k); else state.favs.delete(k);
     toast(now ? "已加入我的片单" : "已从片单移除");
-    if (isLoggedIn()) {
-      api("/api/favs/" + k, { method: now ? "PUT" : "DELETE" })
-        .then(({ status }) => {
-          if (status === 401) { clearSession(); state.user = null; renderLoginState(); }
-        })
-        .catch(() => {});
-    } else {
-      try { localStorage.setItem("huangju_favs", JSON.stringify([...state.favs])); } catch {}
-    }
+    api("/api/favs/" + k, { method: now ? "PUT" : "DELETE" })
+      .then(({ status }) => {
+        if (status === 401) { clearSession(); state.user = null; renderLoginState(); }
+      })
+      .catch(() => {});
+    document.dispatchEvent(new CustomEvent("favchange", { detail: { id: k } }));
     return now;
   }
 
@@ -192,6 +192,7 @@
     opts = opts || {};
     const rating = score(d);
     const h = heat(d.heat);
+    const favd = isFav(d.id);
     return `
     <a class="poster-card" href="play.html?id=${d.id}" title="${esc(d.t)}">
       <img src="${esc(d.poster)}" alt="${esc(d.t)}" loading="lazy"
@@ -199,6 +200,9 @@
       <span class="corner">${esc(d.cat || "精选")}</span>
       <span class="shade"></span>
       <span class="p-play"><span class="ring"></span></span>
+      <button type="button" class="p-fav ${favd ? "on" : ""}" data-id="${d.id}" aria-label="${favd ? "从片单移除" : "加入片单"}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      </button>
       <span class="p-meta">
         <span class="p-title">${esc(d.t)}</span>
         <span class="p-sub">
@@ -249,7 +253,7 @@
       u.className = "userbox";
       const nm = esc(user.nickname || user.account || "影迷");
       u.innerHTML =
-        `<a class="btn btn-ghost btn-sm" href="index.html?fav=1" title="我的片单">👤 ${nm}</a>` +
+        `<a class="btn btn-ghost btn-sm" href="favorites.html" title="我的片单">👤 ${nm}</a>` +
         `<button type="button" class="btn btn-ghost btn-sm" id="btn-logout">退出</button>`;
       na.appendChild(u);
       u.querySelector("#btn-logout").addEventListener("click", logout);
@@ -303,6 +307,25 @@
     clearTimeout(el._t);
     el._t = setTimeout(() => el.classList.remove("show"), 2400);
   }
+
+  /* ---------- 卡片爱心按钮：事件委托 + 状态同步 ---------- */
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".p-fav");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFav(btn.dataset.id);
+  });
+  document.addEventListener("favchange", (e) => {
+    const id = e.detail && e.detail.id;
+    $$(".p-fav").forEach((b) => {
+      if (id == null || b.dataset.id === String(id)) {
+        const on = isFav(b.dataset.id);
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-label", on ? "从片单移除" : "加入片单");
+      }
+    });
+  });
 
   global.App = {
     load, boot, esc, heat, score, byId, bySid, qs, CATS,

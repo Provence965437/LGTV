@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的片单 · 黄果剧场</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== 顶部导航 ===== -->
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="brand" href="index.html">
+        <span class="mark">黄</span>
+        <span class="name">黄果剧场</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html">首页</a>
+        <a href="index.html?cat=经典魔改">经典魔改</a>
+        <a href="index.html?cat=AI魔改">AI魔改</a>
+        <a href="index.html?cat=AI换脸">AI换脸</a>
+        <a href="favorites.html">我的片单</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="nav-search" placeholder="搜索剧名 / 标签" />
+        </div>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 片单列表 ===== -->
+  <main class="wrap">
+    <div class="list-head">
+      <h1 class="page-title">我的片单</h1>
+      <p class="page-sub" id="page-sub">已收藏的剧集</p>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">
+      <div class="big">🗂</div>
+      <p>还没有收藏任何剧集</p>
+      <a class="btn btn-primary" style="margin-top:18px" href="index.html">去逛逛</a>
+    </div>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="site-footer">
+    <div class="wrap inner">
+      <div>
+        <a class="brand" href="index.html"><span class="mark">黄</span><span class="name">黄果剧场</span></a>
+        <p style="margin-top:10px;font-size:12.5px;color:var(--text-faint)">高清短剧 · 沉浸观影</p>
+      </div>
+      <div class="links"><a href="#">关于我们</a><a href="#">服务条款</a><a href="#">隐私政策</a><a href="#">内容合作</a></div>
+      <div style="font-size:12.5px">© 2026 黄果剧场</div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      App.initHeader();
+
+      const grid = document.getElementById("grid");
+      const empty = document.getElementById("empty");
+      const sub = document.getElementById("page-sub");
+
+      function render() {
+        const list = App.dramas
+          .filter((d) => App.isFav(d.id))
+          .sort((a, b) => (b.heat || 0) - (a.heat || 0));
+        App.renderCards(grid, list);
+        empty.style.display = list.length ? "none" : "block";
+        sub.textContent = "已收藏的剧集 · 共 " + list.length + " 部";
+        document.title = "我的片单（" + list.length + "）· 黄果剧场";
+      }
+
+      App.boot().then(() => {
+        if (!App.isLoggedIn()) {
+          location.href = "login.html?next=" + encodeURIComponent("favorites.html");
+          return;
+        }
+        render();
+        document.addEventListener("favchange", render);
+      });
+    })();
+  </script>
+</body>
+</html>
