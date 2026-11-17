@@ -14,8 +14,8 @@
     user: null,        // 当前登录用户
   };
 
-  /* 后端 API 基址：部署在服务器（/hj/ 前缀下）时用相对路径；本地预览指向服务器 nginx */
-  const API = location.hostname === "38.55.194.47" ? "." : "http://38.55.194.47/hj";
+  /* 后端 API 基址：部署后同源相对路径（IP 的 /hj/ 前缀或域名根路径均由 nginx 反代）；仅本地 file:// 预览指向服务器 */
+  const API = location.protocol === "file:" ? "http://38.55.194.47/hj" : ".";
 
   /* 真实分类（按库内数量降序） */
   const CATS = [
